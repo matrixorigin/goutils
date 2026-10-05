@@ -72,12 +72,12 @@ func (s *Stopper) runWorker(f func(), name string) {
 	s.wg.Add(1)
 	var gid uint64
 	go func() {
+		defer s.wg.Done()
 		if s.debug {
 			gid = lang.GetGIDForDebugOnly()
 			log.Printf("goroutine %d started, name %s", gid, name)
 		}
 		f()
-		s.wg.Done()
 		if s.debug {
 			log.Printf("goroutine %d stopped, name %s", gid, name)
 		}
@@ -93,9 +93,11 @@ func (s *Stopper) ShouldStop() chan struct{} {
 // Stop signals all managed worker goroutines to stop and wait for them
 // to actually stop.
 func (s *Stopper) Stop() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	close(s.shouldStopC)
+	func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		close(s.shouldStopC)
+	}()
 	s.wg.Wait()
 }
 
